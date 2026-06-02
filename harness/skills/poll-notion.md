@@ -68,3 +68,27 @@ For each comment where `rich_text` contains `@agent` and `created_time > last_sy
 - Event ID: `notion-comment-<comment_id>`
 - Event type: `comment.tagged`
 - context_key: same Notion ticket entity ID
+
+## Required Notion database properties
+
+The tickets database MUST have these properties configured in Notion:
+
+| Property | Type | Values |
+|---|---|---|
+| `Agent Status` | Select | `Queued`, `In Progress`, `Done`, `Blocked` |
+| `Agent Session ID` | Rich Text | — |
+| `Last Agent Update` | Date | — |
+| `GitHub PR` | URL | — |
+| `Slack Thread` | URL | — |
+
+When creating a stub ticket from Slack, set:
+- `Agent Status` → `Queued`
+- `Slack Thread` → thread URL
+
+When the agent begins work on a ticket, set:
+- `Agent Status` → `In Progress`
+- `Agent Session ID` → current session ID
+- `Last Agent Update` → now
+
+When work is complete, set `Agent Status` → `Done` as the final action.
+When blocked, set `Agent Status` → `Blocked`.
