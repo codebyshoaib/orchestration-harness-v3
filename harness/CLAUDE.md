@@ -1,0 +1,30 @@
+# Orchestration Harness — Tick Entry Point
+
+This file is the L1 routing table. Each `/loop` tick runs the sequence below.
+
+## Tick Sequence
+
+1. **sync-state**: Check and acquire tick lock → read `last_sync_at`
+   - Skill: `harness/skills/sync-state.md`
+   - If lock is active (< 30 min old): stop immediately, do not poll.
+
+2. **Poll all sources** (if any poller fails, release lock and stop — do not update `last_sync_at`):
+   - Notion: `harness/skills/poll-notion.md`
+   - Slack: `harness/skills/poll-slack.md`
+   - GitHub: `harness/skills/poll-github.md`
+
+3. **Dispatch**: `harness/skills/dispatch.md`
+   - Group pending events by context_key
+   - Skip contexts with running sessions
+   - Spawn one subagent per context_key
+
+4. **sync-state**: Update `last_sync_at` → release tick lock
+
+## DB
+All skills use: `harness/db/harness.db`
+
+## Env vars required
+See `.env.example`
+
+## Glossary
+See `CONTEXT.md` in the project root for domain terminology.
