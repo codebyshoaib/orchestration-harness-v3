@@ -40,3 +40,4 @@ Always schedule the next tick at **270s**. Never change this without asking the 
 - Context key is always a Notion ticket entity ID — never a Slack thread or PR.
 - Agents cannot create or modify skill files (v1 constraint).
 - If any poller fails during a tick: release lock, stop — do not update `last_sync_at`.
+- During `/loop` ticks, only invoke skills explicitly listed in `harness/CLAUDE.md`. Never auto-invoke `setup` or any other skill not in the tick sequence.
