@@ -13,9 +13,17 @@ Run E2E tests against the workspace app using Chrome DevTools MCP. Called by sub
 
 ## Phase 1: Start dev server
 
+`npm` may not be on PATH in non-login shells (common with nvm on macOS/Linux, or on Windows without a system-level install). Resolve it first:
+
 ```bash
+# Cross-OS npm resolution — use the first one found
+NPM_BIN=$(command -v npm 2>/dev/null \
+  || ls ~/.nvm/versions/node/*/bin/npm 2>/dev/null | sort -V | tail -1 \
+  || ls "$NVM_BIN/npm" 2>/dev/null \
+  || echo "npm")
+
 cd harness/workspace
-npm run dev > /tmp/nextjs-dev.log 2>&1 &
+$NPM_BIN run dev > /tmp/nextjs-dev.log 2>&1 &
 DEV_PID=$!
 echo $DEV_PID > /tmp/nextjs-dev.pid
 
@@ -35,7 +43,7 @@ Set `attempt = 1` before entering this phase for the first time.
 
 Before running any Chrome DevTools MCP tools, load them:
 ```
-ToolSearch: select:mcp__chrome-devtools__new_page,mcp__chrome-devtools__navigate_page,mcp__chrome-devtools__take_screenshot,mcp__chrome-devtools__wait_for,mcp__chrome-devtools__click,mcp__chrome-devtools__type_text,mcp__chrome-devtools__get_console_message,mcp__chrome-devtools__list_console_messages,mcp__chrome-devtools__close_page
+ToolSearch: select:mcp__chrome-devtools__new_page,mcp__chrome-devtools__navigate_page,mcp__chrome-devtools__take_screenshot,mcp__chrome-devtools__take_snapshot,mcp__chrome-devtools__wait_for,mcp__chrome-devtools__click,mcp__chrome-devtools__type_text,mcp__chrome-devtools__press_key,mcp__chrome-devtools__list_console_messages,mcp__chrome-devtools__close_page
 ```
 
 Before running the first test case, create the screenshots directory.
@@ -44,12 +52,16 @@ Before running the first test case, create the screenshots directory.
 mkdir -p harness/e2e-screenshots/$SESSION_ID
 ```
 
+**Before writing test cases, read the relevant source files in `harness/workspace/src/` to understand the app's actual behaviour.** Do not assume — e.g. completing a todo may auto-archive it rather than leaving it in the main list. Test cases must reflect what the app actually does.
+
 For each test case in `TEST_CASES`:
 
 1. Open a new page: `mcp__chrome-devtools__new_page`
 2. Navigate to `http://localhost:3000` (or the URL specified in the test case): `mcp__chrome-devtools__navigate_page`
-3. Execute each step in the test case's `steps` list using the appropriate Chrome DevTools MCP tool
-4. Assert the expected outcome. If assertion fails, record the failure reason.
+3. Confirm page is ready using `mcp__chrome-devtools__wait_for` with visible text (a heading or button label) — **not** placeholder text, which is not matched by `wait_for`.
+4. Take a snapshot with `mcp__chrome-devtools__take_snapshot` to read element UIDs before interacting.
+5. Execute each step in the test case's `steps` list using the appropriate Chrome DevTools MCP tool. Use `mcp__chrome-devtools__press_key` for keyboard interactions (Backspace, Enter, Escape, etc.).
+6. Assert the expected outcome by taking another snapshot and checking element presence. If assertion fails, record the failure reason.
 5. Capture console output before closing the page: `mcp__chrome-devtools__list_console_messages` — store the result as `console_output`.
 6. Capture a screenshot regardless of pass/fail:
    ```
@@ -70,7 +82,7 @@ If any test cases failed and `attempt <= 5`:
 3. If the fix changes server-side code, restart the dev server:
    ```bash
    kill $(cat /tmp/nextjs-dev.pid) 2>/dev/null
-   cd harness/workspace && npm run dev > /tmp/nextjs-dev.log 2>&1 &
+   cd harness/workspace && $NPM_BIN run dev > /tmp/nextjs-dev.log 2>&1 &
    echo $! > /tmp/nextjs-dev.pid
    # Poll until ready (same 30s loop as Phase 1)
    for i in $(seq 1 30); do
