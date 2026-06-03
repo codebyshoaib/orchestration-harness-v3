@@ -64,7 +64,7 @@ Collect results: list of `{name, passed: bool, failure_reason, screenshot_path, 
 
 If all test cases passed → skip to Phase 4.
 
-If any test cases failed and `attempt < 5`:
+If any test cases failed and `attempt <= 5`:
 1. Analyse: failure reason + stored `console_output` from Phase 2 results + screenshot
 2. Fix the relevant source files in `harness/workspace/src/` (never modify skill files)
 3. If the fix changes server-side code, restart the dev server:
