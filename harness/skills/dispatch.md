@@ -132,8 +132,34 @@ Answer directly in Slack, update the Notion ticket, close the session.
 **Step B — Execute (only after user approves via "@Cortex go" reply):**
 1. Create a new branch: `git -C harness/workspace checkout -b <short-kebab-description>`
 2. Implement the plan.
-3. Commit, push, and open a PR via `gh pr create` against the default branch.
-4. The PR URL must be recorded in the Notion ticket's `GitHub PR` property.
+3. Commit and push the implementation branch (do NOT open the PR yet):
+   ```bash
+   git add -A && git commit -m "feat: <description>"
+   git push -u origin <branch-name>
+   ```
+
+4. Run E2E tests: read and follow `harness/skills/e2e-test.md`, passing:
+   - The `TEST_CASES` defined in Step A
+   - The current `SESSION_ID`
+   - The Notion `PAGE_ID` for this ticket
+
+   **If result is `passed`:**
+   - Open the PR: `gh pr create --title "..." --body "..."`
+   - Continue to the "When done" block below — set Status → `Done`.
+
+   **If result is `failed` (5 attempts exhausted):**
+   - Open the PR: `gh pr create --title "..." --body "E2E tests failed — needs review. Failing cases: <list>"`
+   - Post to the Slack thread:
+     ```
+     E2E tests failed after 5 attempts for this PR.
+     Failing cases:
+     - <test case name>: <failure reason>
+     Console errors: <final attempt errors>
+     PR is open but needs human review: <PR_URL>
+     ```
+   - Set Notion `Status` → `Blocked` (instead of `Done`)
+   - Set `GitHub PR` property to the PR URL
+   - Then run the "When done" cleanup (update session, mark events done) — session closes as `completed`.
 
 When done:
 1. Rename the Notion ticket from its stub title to a concise, meaningful name based on the work done (e.g. "Add archive feature for completed tasks").
