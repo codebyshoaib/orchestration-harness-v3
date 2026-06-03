@@ -110,16 +110,24 @@ Answer directly in Slack, update the Notion ticket, close the session.
 **Step A — Draft a plan and ask for feedback via Slack and Notion:**
 1. Read the relevant source code to understand the current state.
 2. Write a concise implementation plan: what you'll build, key design decisions, files to change, any open questions.
-3. Post the plan to the Slack thread and ask for approval before proceeding:
+3. Define E2E test cases for this feature. For each user-visible behaviour the implementation will add or change, write a test case with:
+   - `name`: short label (e.g. "New todo appears in list after submission")
+   - `steps`: the Chrome DevTools MCP actions to perform (navigate, click, type, wait, assert)
+   - `expected`: the observable outcome that confirms the feature works
+   Hold these test cases in your working context — they will be used in Step B and included in the Slack plan message.
+4. Post the plan to the Slack thread and ask for approval before proceeding:
    ```
    "Here's my plan for [feature]:
    - [key decision 1]
    - [key decision 2]
    ...
+   - E2E test cases:
+     - [test case 1 name]: [expected outcome]
+     - [test case 2 name]: [expected outcome]
    Any questions or changes before I start? Reply @Cortex go to proceed."
    ```
-4. Set Notion ticket `Status` → `Blocked` (waiting for approval).
-5. Update session: `status='cancelled'` — the user's "@Cortex go" reply will spawn a new session to execute.
+5. Set Notion ticket `Status` → `Blocked` (waiting for approval).
+6. Update session: `status='cancelled'` — the user's "@Cortex go" reply will spawn a new session to execute.
 
 **Step B — Execute (only after user approves via "@Cortex go" reply):**
 1. Create a new branch: `git -C harness/workspace checkout -b <short-kebab-description>`
