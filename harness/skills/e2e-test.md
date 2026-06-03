@@ -79,7 +79,7 @@ If any test cases failed and `attempt < 5`:
    done
    curl -s http://localhost:3000 > /dev/null 2>&1 || echo "WARN: server may not be ready after restart"
    ```
-4. Increment `attempt` by 1, then re-enter Phase 2 (only if `attempt < 5`).
+4. Increment `attempt` by 1, then re-enter Phase 2 (only if `attempt <= 5`).
 
 If `attempt == 5` and tests still fail → proceed to Phase 4 with status `failed`.
 
@@ -135,11 +135,13 @@ curl -s -X PATCH "https://api.notion.com/v1/blocks/$PAGE_ID/children" \
         }
       },
       {
+        "type": "paragraph",
         "paragraph": {
           "rich_text": [{"text": {"content": "<test-name>: ✅ or ❌ <failure_reason if failed>"}}]
         }
       },
       {
+        "type": "image",
         "image": {
           "type": "file",
           "file": {
