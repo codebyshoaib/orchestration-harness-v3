@@ -28,5 +28,8 @@ _Avoid_: stuck, waiting, paused
 **Dispatcher**: The logic within a tick that reads pending Events, resolves their Entity graph, and spawns Agent Sessions for contexts that don't already have a running Session. The Dispatcher injects rich context (ticket content, linked entities, triggering event, available skills list) but does not prescribe what the agent does — the agent reasons freely and pulls skills as needed. Skills are human-authored markdown files; the agent can invoke them but cannot create or modify them in v1.
 _Avoid_: scheduler, router, orchestrator
 
+**Workspace**: The local checkout of the target repository, located at `harness/workspace/`. Subagents spawned by the Dispatcher operate on the Workspace. Created once during setup; never committed to the harness repo.
+_Avoid_: target repo, project folder, working directory
+
 **Context Key**: The Notion ticket Entity ID that groups related Events and Sessions. Always a Notion ticket — never a Slack thread or PR. The Dispatcher groups by context key to avoid duplicate sessions for the same work. The Slack poller is responsible for creating a stub Notion ticket (and setting the context key) when work originates from Slack. The stub has a minimal title (e.g., "From Slack: [timestamp]") and no body — the agent enriches it as its first action.
 _Avoid_: thread key, root ID, parent ID
