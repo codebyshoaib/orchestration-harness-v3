@@ -159,7 +159,7 @@ Answer directly in Slack, update the Notion ticket, close the session.
      ```
    - Set Notion `Status` → `Blocked` (instead of `Done`)
    - Set `GitHub PR` property to the PR URL
-   - Then run the "When done" cleanup (update session, mark events done) — session closes as `completed`.
+   - Then run the "When done" cleanup steps 1, 2, 4, and 5 only — skip step 3 (do NOT set Status → `Done`; it is already set to `Blocked` above).
 
 When done:
 1. Rename the Notion ticket from its stub title to a concise, meaningful name based on the work done (e.g. "Add archive feature for completed tasks").
