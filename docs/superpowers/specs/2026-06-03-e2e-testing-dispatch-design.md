@@ -72,9 +72,34 @@ Return one of:
 
 ### Phase 5: Upload screenshots to Notion
 
-Regardless of pass/fail, append a section to the Notion ticket body:
+Regardless of pass/fail, upload each screenshot to Notion using the file upload API and attach as image blocks on the ticket:
+
+```bash
+# Step 1: Create a file upload
+UPLOAD=$(curl -s -X POST "https://api.notion.com/v1/file_uploads" \
+  -H "Authorization: Bearer $NOTION_API_KEY" \
+  -H "Notion-Version: 2022-06-28" \
+  -H "Content-Type: application/json" \
+  -d '{"content_type": "image/png"}')
+UPLOAD_ID=$(echo "$UPLOAD" | jq -r '.id')
+
+# Step 2: Send the file bytes
+curl -s -X POST "https://api.notion.com/v1/file_uploads/$UPLOAD_ID/send" \
+  -H "Authorization: Bearer $NOTION_API_KEY" \
+  -H "Notion-Version: 2022-06-28" \
+  -F "file=@harness/e2e-screenshots/$SESSION_ID/$TEST_NAME-attempt-$N.png"
+
+# Step 3: Attach as image block on the Notion page
+curl -s -X PATCH "https://api.notion.com/v1/blocks/$PAGE_ID/children" \
+  -H "Authorization: Bearer $NOTION_API_KEY" \
+  -H "Notion-Version: 2022-06-28" \
+  -H "Content-Type: application/json" \
+  -d "{\"children\": [{\"image\": {\"type\": \"file\", \"file\": {\"type\": \"uploaded_file\", \"uploaded_file\": {\"id\": \"$UPLOAD_ID\"}}}}]}"
+```
+
+Append a section to the Notion ticket body:
 - A heading: "E2E Test Results — <passed|failed>"
-- For each test case: test name, result emoji (✅/❌), and the screenshot filename noted in a paragraph block (Notion does not support binary image uploads via API — screenshots are referenced by local path and noted in the ticket body as text)
+- For each test case: test name, result emoji (✅/❌), and the screenshot as an uploaded image block
 
 ## Escalation on failure (5 attempts exhausted)
 
