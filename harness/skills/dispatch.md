@@ -59,7 +59,7 @@ Gather the following for injection into the subagent prompt:
    curl -s "https://slack.com/api/conversations.replies?channel=$CHANNEL_ID&ts=$THREAD_TS&limit=10" \
      -H "Authorization: Bearer $SLACK_BOT_TOKEN"
    ```
-4. Available skills list: sync-state, poll-notion, poll-slack, poll-github, entity-registry, dispatch
+4. Available skills list: sync-state, poll-notion, poll-slack, poll-github, entity-registry, dispatch, e2e-test
 5. Triggering events (the pending event payloads for this context_key)
 
 ## Step 4: Create a session record
@@ -98,6 +98,7 @@ Available skills (read and follow them as needed):
 - harness/skills/poll-github.md
 - harness/skills/entity-registry.md
 - harness/skills/dispatch.md
+- harness/skills/e2e-test.md
 
 Reason about what action is needed. Then follow this workflow:
 
