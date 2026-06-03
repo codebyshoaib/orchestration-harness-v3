@@ -6,6 +6,8 @@ A skill-driven, loop-based orchestrator. Polls Notion/Slack/GitHub, queues Event
 
 `/loop` → reads `harness/CLAUDE.md` (tick sequence) → runs pollers → dispatcher → subagents.
 
+**When `/loop` fires, run the tick sequence in `harness/CLAUDE.md` directly. Do NOT invoke the `setup` skill — setup is a one-time operation run via `/setup` only.**
+
 ## Key Files
 
 | Path | Purpose |
@@ -27,6 +29,10 @@ Full definitions: `@CONTEXT.md`
 - `poll-notion.md`, `poll-slack.md`, `poll-github.md` — source pollers
 - `dispatch.md` — groups events by context key, spawns subagents
 - `entity-registry.md` — entity dedup and link tracking
+
+## Loop Interval
+
+Always schedule the next tick at **270s**. Never change this without asking the user first.
 
 ## Rules
 

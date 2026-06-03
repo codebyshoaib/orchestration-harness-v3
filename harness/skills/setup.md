@@ -97,6 +97,57 @@ EOF
 
 ---
 
+## Phase 2b: Provision Notion Database Properties
+
+**Skip if:** all five required properties exist in the Notion database (`Agent Status`, `Agent Session ID`, `Last Agent Update`, `GitHub PR`, `Slack Thread`).
+
+Check:
+```bash
+source harness/.env
+curl -s "https://api.notion.com/v1/databases/$NOTION_DATABASE_ID" \
+  -H "Authorization: Bearer $NOTION_API_KEY" \
+  -H "Notion-Version: 2022-06-28" \
+  | python3 -c "
+import sys, json
+props = set(json.load(sys.stdin).get('properties', {}).keys())
+required = {'Agent Status', 'Agent Session ID', 'Last Agent Update', 'GitHub PR', 'Slack Thread'}
+missing = required - props
+print('missing: ' + ', '.join(sorted(missing)) if missing else 'all present')
+"
+```
+
+If any are missing, add them:
+```bash
+curl -s -X PATCH "https://api.notion.com/v1/databases/$NOTION_DATABASE_ID" \
+  -H "Authorization: Bearer $NOTION_API_KEY" \
+  -H "Notion-Version: 2022-06-28" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "properties": {
+      "Agent Status": {
+        "select": {
+          "options": [
+            {"name": "Queued", "color": "yellow"},
+            {"name": "In Progress", "color": "blue"},
+            {"name": "Done", "color": "green"},
+            {"name": "Blocked", "color": "red"}
+          ]
+        }
+      },
+      "Agent Session ID": {"rich_text": {}},
+      "Last Agent Update": {"date": {}},
+      "GitHub PR": {"url": {}},
+      "Slack Thread": {"url": {}}
+    }
+  }' | python3 -c "import sys,json; d=json.load(sys.stdin); print('Notion properties provisioned ✓' if d.get('object')=='database' else 'ERROR: '+str(d))"
+```
+
+If the PATCH returns an error, stop with: "Failed to provision Notion properties — check that the integration has write access to the database."
+
+Print: "Notion database properties verified ✓"
+
+---
+
 ## Phase 3: Init DB
 
 **Skip if:** `harness/db/harness.db` exists AND `SELECT last_sync_at FROM sync_state WHERE id='global'` returns a value from today or later.
@@ -222,5 +273,10 @@ Print setup summary:
 ║ Test tick: clean                         ║
 ╚══════════════════════════════════════════╝
 
-Next: run /loop to start the orchestrator.
+Next: start the orchestrator by running this command in Claude Code:
+
+  /loop
+
+This runs one tick per iteration (poll → dispatch → sync). Claude Code
+will keep looping until you stop it with Ctrl+C or /exit.
 ```

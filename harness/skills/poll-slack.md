@@ -4,18 +4,27 @@ Poll the configured Slack channel for messages since `last_sync_at` that mention
 
 ## Required env vars
 - `SLACK_BOT_TOKEN`
+- `SLACK_USER_TOKEN` (user token with `search:read` scope — required for search API)
 - `SLACK_CHANNEL_ID`
 - `NOTION_API_KEY`
 - `NOTION_DATABASE_ID`
 
-## Poll for messages
+## Poll for messages mentioning @agent
+
+Use `search.messages` to find all messages (top-level and replies) that mention the bot, across all threads:
 
 ```bash
 LAST_SYNC_TS=$(sqlite3 harness/db/harness.db \
   "SELECT strftime('%s', last_sync_at) FROM sync_state WHERE id='global';")
-curl -s "https://slack.com/api/conversations.history?channel=$SLACK_CHANNEL_ID&oldest=$LAST_SYNC_TS&limit=100" \
-  -H "Authorization: Bearer $SLACK_BOT_TOKEN"
+curl -s "https://slack.com/api/search.messages?query=<@U0B5YJEQQ6P>&count=20&sort=timestamp&sort_dir=asc" \
+  -H "Authorization: Bearer $SLACK_USER_TOKEN"
 ```
+
+Filter results to `message.ts > last_sync_at`. For each matching message, extract:
+- `channel.id` → `CHANNEL_ID`
+- `ts` → `MESSAGE_TS`
+- `thread_ts` (if present) → the root thread timestamp; use this as the thread identifier
+- If no `thread_ts`, the message itself is the thread root: `THREAD_TS=$MESSAGE_TS`
 
 ## For each message mentioning `@agent`
 
@@ -41,7 +50,7 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
   -d "{
     \"parent\": {\"database_id\": \"$NOTION_DATABASE_ID\"},
     \"properties\": {
-      \"Name\": {\"title\": [{\"text\": {\"content\": \"$STUB_TITLE\"}}]},
+      \"Task name\": {\"title\": [{\"text\": {\"content\": \"$STUB_TITLE\"}}]},
       \"Agent Status\": {\"select\": {\"name\": \"Queued\"}},
       \"Slack Thread\": {\"url\": \"https://slack.com/archives/$CHANNEL_ID/p${MESSAGE_TS/./}\"}
     }
