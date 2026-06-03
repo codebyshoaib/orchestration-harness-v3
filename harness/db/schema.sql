@@ -49,4 +49,4 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 INSERT OR IGNORE INTO sync_state (id, last_sync_at, updated_at)
-VALUES ('global', '2024-01-01T00:00:00Z', datetime('now'));
+VALUES ('global', datetime('now'), datetime('now'));
