@@ -99,7 +99,7 @@ EOF
 
 ## Phase 2b: Provision Notion Database Properties
 
-**Skip if:** all five required properties exist in the Notion database (`Agent Status`, `Agent Session ID`, `Last Agent Update`, `GitHub PR`, `Slack Thread`).
+**Skip if:** all four required custom properties exist in the Notion database (`Agent Session ID`, `Last Agent Update`, `GitHub PR`, `Slack Thread`). `Status` is a built-in Notion property — no need to provision it.
 
 Check:
 ```bash
@@ -110,7 +110,7 @@ curl -s "https://api.notion.com/v1/databases/$NOTION_DATABASE_ID" \
   | python3 -c "
 import sys, json
 props = set(json.load(sys.stdin).get('properties', {}).keys())
-required = {'Agent Status', 'Agent Session ID', 'Last Agent Update', 'GitHub PR', 'Slack Thread'}
+required = {'Agent Session ID', 'Last Agent Update', 'GitHub PR', 'Slack Thread'}
 missing = required - props
 print('missing: ' + ', '.join(sorted(missing)) if missing else 'all present')
 "
@@ -124,16 +124,6 @@ curl -s -X PATCH "https://api.notion.com/v1/databases/$NOTION_DATABASE_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "properties": {
-      "Agent Status": {
-        "select": {
-          "options": [
-            {"name": "Queued", "color": "yellow"},
-            {"name": "In Progress", "color": "blue"},
-            {"name": "Done", "color": "green"},
-            {"name": "Blocked", "color": "red"}
-          ]
-        }
-      },
       "Agent Session ID": {"rich_text": {}},
       "Last Agent Update": {"date": {}},
       "GitHub PR": {"url": {}},

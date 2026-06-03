@@ -51,7 +51,7 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
     \"parent\": {\"database_id\": \"$NOTION_DATABASE_ID\"},
     \"properties\": {
       \"Task name\": {\"title\": [{\"text\": {\"content\": \"$STUB_TITLE\"}}]},
-      \"Agent Status\": {\"select\": {\"name\": \"Queued\"}},
+      \"Status\": {\"status\": {\"name\": \"Not started\"}},
       \"Slack Thread\": {\"url\": \"https://slack.com/archives/$CHANNEL_ID/p${MESSAGE_TS/./}\"}
     }
   }"

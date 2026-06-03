@@ -99,16 +99,77 @@ Available skills (read and follow them as needed):
 - harness/skills/entity-registry.md
 - harness/skills/dispatch.md
 
-Reason about what action is needed and act. When done:
-1. Update Notion ticket status as your LAST action.
-2. Update session record:
+Reason about what action is needed. Then follow this workflow:
+
+### For informational questions (no code changes needed)
+Answer directly in Slack, update the Notion ticket, close the session.
+
+### For feature requests or implementation work
+**Do NOT write code immediately.** Follow this plan-first flow:
+
+**Step A — Draft a plan and ask for feedback via Slack and Notion:**
+1. Read the relevant source code to understand the current state.
+2. Write a concise implementation plan: what you'll build, key design decisions, files to change, any open questions.
+3. Post the plan to the Slack thread and ask for approval before proceeding:
+   ```
+   "Here's my plan for [feature]:
+   - [key decision 1]
+   - [key decision 2]
+   ...
+   Any questions or changes before I start? Reply @Cortex go to proceed."
+   ```
+4. Set Notion ticket `Status` → `Blocked` (waiting for approval).
+5. Update session: `status='cancelled'` — the user's "@Cortex go" reply will spawn a new session to execute.
+
+**Step B — Execute (only after user approves via "@Cortex go" reply):**
+1. Create a new branch: `git -C harness/workspace checkout -b <short-kebab-description>`
+2. Implement the plan.
+3. Commit, push, and open a PR via `gh pr create` against the default branch.
+4. The PR URL must be recorded in the Notion ticket's `GitHub PR` property.
+
+When done:
+1. Rename the Notion ticket from its stub title to a concise, meaningful name based on the work done (e.g. "Add archive feature for completed tasks").
+2. Update the Notion ticket body with a summary of what was done: changes made, files modified, and the PR link if one was opened. Set `GitHub PR` property if a PR was created.
+3. Set Notion ticket `Status` → `Done` as your LAST property update.
+4. Update session record:
    sqlite3 harness/db/harness.db "UPDATE sessions SET status='completed', updated_at=datetime('now') WHERE id='<SESSION_ID>';"
-3. Mark events as done:
+5. Mark events as done:
    sqlite3 harness/db/harness.db "UPDATE events SET status='done', processed_at=datetime('now') WHERE context_key='<context_key>' AND status='processing';"
+
+To rename + update the Notion ticket:
+```bash
+curl -s -X PATCH "https://api.notion.com/v1/pages/<PAGE_ID>" \
+  -H "Authorization: Bearer $NOTION_API_KEY" \
+  -H "Notion-Version: 2022-06-28" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "properties": {
+      "Task name": {"title": [{"text": {"content": "<meaningful title>"}}]},
+      "Status": {"status": {"name": "Done"}},
+      "Last Agent Update": {"date": {"start": "<today>"}},
+      "GitHub PR": {"url": "<pr_url or null>"}
+    }
+  }'
+```
+
+To add a summary to the Notion page body:
+```bash
+curl -s -X PATCH "https://api.notion.com/v1/blocks/<PAGE_ID>/children" \
+  -H "Authorization: Bearer $NOTION_API_KEY" \
+  -H "Notion-Version: 2022-06-28" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "children": [{
+      "paragraph": {
+        "rich_text": [{"text": {"content": "<summary of changes, files modified, PR link>"}}]
+      }
+    }]
+  }'
+```
 
 If you cannot proceed without human input:
 1. Post a Slack message to the originating thread explaining what you need.
-2. Set Notion ticket status to `Blocked`.
+2. Set Notion ticket `Status` → `Blocked`.
 3. Update session: status='cancelled' (human will restart via @agent reply).
 ```
 

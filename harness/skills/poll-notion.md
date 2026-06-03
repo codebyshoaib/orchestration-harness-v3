@@ -20,7 +20,7 @@ curl -s -X POST "https://api.notion.com/v1/databases/$NOTION_DATABASE_ID/query" 
         {\"timestamp\": \"last_edited_time\", \"last_edited_time\": {\"after\": \"$LAST_SYNC\"}},
         {\"or\": [
           {\"property\": \"Assignee\", \"people\": {\"contains\": \"$NOTION_AGENT_USER_ID\"}},
-          {\"property\": \"Agent Status\", \"select\": {\"is_not_empty\": true}}
+          {\"property\": \"Status\", \"status\": {\"is_not_empty\": true}}
         ]}
       ]
     }
@@ -75,20 +75,20 @@ The tickets database MUST have these properties configured in Notion:
 
 | Property | Type | Values |
 |---|---|---|
-| `Agent Status` | Select | `Queued`, `In Progress`, `Done`, `Blocked` |
+| `Status` | Status | `Not started`, `In progress`, `Done`, `Blocked`, `In review`, `Cancelled` |
 | `Agent Session ID` | Rich Text | — |
 | `Last Agent Update` | Date | — |
 | `GitHub PR` | URL | — |
 | `Slack Thread` | URL | — |
 
 When creating a stub ticket from Slack, set:
-- `Agent Status` → `Queued`
+- `Status` → `Not started`
 - `Slack Thread` → thread URL
 
 When the agent begins work on a ticket, set:
-- `Agent Status` → `In Progress`
+- `Status` → `In progress`
 - `Agent Session ID` → current session ID
 - `Last Agent Update` → now
 
-When work is complete, set `Agent Status` → `Done` as the final action.
-When blocked, set `Agent Status` → `Blocked`.
+When work is complete, set `Status` → `Done` as the final action.
+When blocked, set `Status` → `Blocked`.
