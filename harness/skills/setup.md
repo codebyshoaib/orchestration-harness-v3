@@ -180,3 +180,47 @@ Once command is determined:
    - Command run: `<command>`
    - Log tail: last 20 lines of `.dev-server.log`
    - Action: "Check the log at `harness/workspace/.dev-server.log` and restart manually, then re-run `/setup`"
+
+---
+
+## Phase 6: Test Tick
+
+Run one full tick to confirm all pollers connect and the system is healthy. Because `last_sync_at` was seeded to now, expect zero or very few events — that is the success case.
+
+Steps:
+1. Load env:
+   ```bash
+   set -a && source harness/.env && set +a
+   ```
+2. Clear any stale tick lock (safe during setup — no legitimate tick is running):
+   ```bash
+   sqlite3 harness/db/harness.db "DELETE FROM tick_lock WHERE id='global';"
+   ```
+3. Follow `harness/skills/sync-state.md` to acquire the tick lock.
+4. Follow `harness/skills/poll-notion.md`. If it fails: release lock, stop — print the error and which env var to check.
+5. Follow `harness/skills/poll-slack.md`. If it fails: release lock, stop.
+6. Follow `harness/skills/poll-github.md`. If it fails: release lock, stop.
+7. Follow `harness/skills/dispatch.md`. (With no events, this is a no-op — that is expected.)
+8. Follow `harness/skills/sync-state.md` to update `last_sync_at` and release lock.
+9. Print: "Test tick complete ✓ — pollers connected, no errors"
+
+---
+
+## Phase 7: Done
+
+Print setup summary:
+
+```
+╔══════════════════════════════════════════╗
+║         Harness Setup Complete ✓         ║
+╠══════════════════════════════════════════╣
+║ Env:       harness/.env (all validated)  ║
+║ DB:        harness/db/harness.db         ║
+║ Workspace: harness/workspace/            ║
+║ Repo:      <GITHUB_REPO>                 ║
+║ Dev server: running                      ║
+║ Test tick: clean                         ║
+╚══════════════════════════════════════════╝
+
+Next: run /loop to start the orchestrator.
+```
