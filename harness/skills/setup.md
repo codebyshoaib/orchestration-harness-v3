@@ -94,3 +94,89 @@ GITHUB_REPO=$GITHUB_REPO
 EOF
 ```
 6. Print: "Credentials validated and written to harness/.env ✓"
+
+---
+
+## Phase 3: Init DB
+
+**Skip if:** `harness/db/harness.db` exists AND `SELECT last_sync_at FROM sync_state WHERE id='global'` returns a value from today or later.
+
+```bash
+bash harness/db/init.sh
+```
+
+Verify:
+```bash
+sqlite3 harness/db/harness.db "SELECT last_sync_at FROM sync_state WHERE id='global';"
+```
+Expected: today's date/time (not `2024-01-01`).
+
+Print: "Database initialized ✓"
+
+---
+
+## Phase 4: Clone Target Repo
+
+**Skip if:** `harness/workspace/` exists and contains a valid git repo (`git -C harness/workspace rev-parse HEAD` succeeds). If so, run `git -C harness/workspace pull` and print "Workspace up to date ✓".
+
+Steps:
+1. Ask: "What is the target repo URL? (This is the project the harness will orchestrate)"
+2. Run:
+   ```bash
+   git clone <url> harness/workspace
+   ```
+3. Extract the repo name for GITHUB_REPO:
+   ```bash
+   GITHUB_REPO=$(git -C harness/workspace remote get-url origin \
+     | sed 's/.*github.com[:/]\(.*\)\.git/\1/' \
+     | sed 's/.*github.com[:/]\(.*\)/\1/')
+   echo "GITHUB_REPO=$GITHUB_REPO"
+   ```
+4. Update `GITHUB_REPO` in `harness/.env`:
+   ```bash
+   python3 -c "
+import re, pathlib, os
+p = pathlib.Path('harness/.env')
+p.write_text(re.sub(r'^GITHUB_REPO=.*', 'GITHUB_REPO=' + os.environ['GITHUB_REPO'], p.read_text(), flags=re.MULTILINE))
+"
+   ```
+5. Print: "Target repo cloned to harness/workspace ✓  GITHUB_REPO=$GITHUB_REPO"
+
+---
+
+## Phase 5: Detect & Start Stack
+
+Stack detection (check in this order, stop at first match):
+1. `package.json` present → likely Node. Check `scripts.dev`, `scripts.start` in package.json. Prefer `dev` over `start`.
+2. `pyproject.toml` present → likely Python. Look for `[tool.taskipy]`, `[tool.poetry.scripts]`, or a `Makefile` with a `run`/`serve` target.
+3. `Makefile` present → inspect targets. Look for `run`, `serve`, `dev`, `start`.
+4. None matched → ask: "I couldn't detect a start command. What command starts the dev server for this project?"
+
+If multiple signals are present (e.g., both `package.json` and `pyproject.toml`), ask: "I found multiple project files. Which component should I start? Options: [list detected options]"
+
+Once command is determined:
+1. Print the inferred command and ask: "I'll run `<command>` to start the dev server. Does that look right? (yes/no)"
+2. If no, ask: "What command should I run instead?"
+3. Run the confirmed command in the background, redirecting output to `harness/workspace/.dev-server.log`:
+   ```bash
+   cd harness/workspace && <command> > .dev-server.log 2>&1 &
+   echo $! > ../.dev-server.pid
+   ```
+4. Watch `.dev-server.log` for readiness signals every 5 seconds:
+   ```bash
+   # Poll for up to 3 minutes (36 × 5s)
+   for i in $(seq 1 36); do
+     if grep -qiE "ready|listening|started|localhost|0\.0\.0\.0|port [0-9]+" harness/workspace/.dev-server.log 2>/dev/null; then
+       echo "Dev server ready ✓"
+       break
+     fi
+     if [ $i -eq 6 ] || [ $i -eq 12 ] || [ $i -eq 18 ] || [ $i -eq 24 ] || [ $i -eq 30 ]; then
+       echo "Still waiting for dev server to start... ($(( i * 5 ))s elapsed)"
+     fi
+     sleep 5
+   done
+   ```
+5. If no readiness signal after 3 minutes: stop with:
+   - Command run: `<command>`
+   - Log tail: last 20 lines of `.dev-server.log`
+   - Action: "Check the log at `harness/workspace/.dev-server.log` and restart manually, then re-run `/setup`"
