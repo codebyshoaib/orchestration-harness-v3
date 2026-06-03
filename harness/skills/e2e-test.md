@@ -155,11 +155,8 @@ curl -s -X PATCH "https://api.notion.com/v1/blocks/$PAGE_ID/children" \
       {
         "type": "image",
         "image": {
-          "type": "file",
-          "file": {
-            "type": "uploaded_file",
-            "uploaded_file": {"id": "<UPLOAD_ID>"}
-          }
+          "type": "file_upload",
+          "file_upload": {"id": "<UPLOAD_ID>"}
         }
       }
     ]
