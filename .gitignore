@@ -4,3 +4,4 @@ harness/workspace/
 .env
 *.lock
 *.pid
+harness/e2e-screenshots/
