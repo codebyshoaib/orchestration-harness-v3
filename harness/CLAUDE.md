@@ -20,6 +20,11 @@ This file is the L1 routing table. Each `/loop` tick runs the sequence below.
 
 4. **sync-state**: Update `last_sync_at` → release tick lock
 
+5. **self-improve** (runs only if harness is idle + 24h gate passes):
+   - Skill: `harness/skills/self-improve.md`
+   - Skips silently if: any pending/processing events, any running sessions, < 24h since last run, or circuit breaker active.
+   - Failure in this step does NOT affect the tick. `ScheduleWakeup` has already been called in step 4.
+
 ## DB
 All skills use: `harness/db/harness.db`
 
