@@ -218,3 +218,10 @@ sqlite3 harness/db/harness.db \
 sqlite3 harness/db/harness.db \
   "UPDATE events SET status='pending' WHERE context_key='$CONTEXT_KEY' AND status='processing';"
 ```
+
+## Self-Improvement Notes (2026-06-04)
+
+### Gap: Failure-path status overwrites Blocked
+**Signal:** session 0576d92b: subagent review (index 299) found that the "When done" cleanup block would overwrite `Status → Blocked` with `Status → Done` on the E2E failure path. Agent had to re-read dispatch.md at index 299 to verify the logic, then commit a fix.
+**Category:** ambiguity
+**Suggestion:** Add an explicit guard in the "When done" block: "If the current session status is `failed`, do NOT set Notion `Status → Done`. Only set `Done` on a successful result." This prevents the cleanup block from silently erasing a Blocked or failed state.

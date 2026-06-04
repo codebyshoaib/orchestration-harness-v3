@@ -164,3 +164,15 @@ curl -s -X PATCH "https://api.notion.com/v1/blocks/$PAGE_ID/children" \
 ```
 
 Repeat the paragraph + image pair for each test case.
+
+## Self-Improvement Notes (2026-06-04)
+
+### Gap: Retry logic wording caused re-reads
+**Signal:** session 0576d92b: e2e-test.md was read 4 times (indices 252, 271, 462, 545). The agent re-read at 252 and 271 specifically to check the retry/failure loop condition before editing it. Re-reads at 462 and 545 were to re-orient before running the skill in a new context.
+**Category:** ambiguity
+**Suggestion:** Add a short TL;DR block at the top of Phase 3 summarizing the retry loop: "Up to 5 attempts. On failure, analyse screenshot + console, fix the code, re-run. After 5 failures, report all failures and stop." This lets agents verify the loop behaviour without re-reading the full phase.
+
+### Gap: Steps were revised during execution
+**Signal:** session 0576d92b: e2e-test.md was edited 5 times (indices 274, 549, 551, 553, 557). Edits covered: retry condition wording (274), dev server start path (549), Chrome DevTools ToolSearch block (551), per-test-case loop phrasing (553), and server cleanup command (557).
+**Category:** incorrect-output
+**Suggestion:** Validate all bash commands in the skill against the actual workspace layout (`harness/workspace/`) before publishing. The `npm run dev` path and `kill $(cat /tmp/nextjs-dev.pid)` pattern should be smoke-tested once per setup so the skill doesn't need in-flight corrections.

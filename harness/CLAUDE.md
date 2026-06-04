@@ -33,3 +33,10 @@ See `.env.example`
 
 ## Glossary
 See `CONTEXT.md` in the project root for domain terminology.
+
+## Self-Improvement Notes (2026-06-04)
+
+### Gap: No recovery guidance for browser snapshot loop
+**Signal:** session 0576d92b: `take_snapshot` returned the same "Create Next App" page snapshot 3x (indices 401, 423, 434) and again 3x (indices 506, 517, 526) when `wait_for` timed out because of unexpected app behaviour (auto-archive on completion). Agent had to query the DB directly to diagnose.
+**Category:** missing-recovery
+**Suggestion:** Add to `harness/skills/e2e-test.md` Phase 3: "If `wait_for` times out and `take_snapshot` returns the same state on repeat calls, query the app's DB directly (`sqlite3 harness/workspace/*.db` or equivalent) to check actual data state before concluding the test step failed. App behaviour such as auto-archive, pagination, or filter-based hiding can cause elements to disappear from the DOM without being an error."

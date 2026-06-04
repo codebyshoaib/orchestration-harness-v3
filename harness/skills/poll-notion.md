@@ -92,3 +92,10 @@ When the agent begins work on a ticket, set:
 
 When work is complete, set `Status` → `Done` as the final action.
 When blocked, set `Status` → `Blocked`.
+
+## Self-Improvement Notes (2026-06-04)
+
+### Gap: Property name mismatch caused revisions
+**Signal:** session c7370b8f: poll-notion.md was edited twice (indices 73, 76) to replace `Agent Status` references with the actual Notion built-in `Status` property. The agent had to query the Notion API to discover the real property names before fixing the skill.
+**Category:** incorrect-output
+**Suggestion:** The "Required Notion database properties" table already lists the correct property names. Add a note: "Always verify property names match via `GET /v1/databases/{id}` before writing skills that reference Notion properties. The built-in `Status` field is not the same as a custom `Agent Status` select field." This prevents future authors from assuming a custom property exists.

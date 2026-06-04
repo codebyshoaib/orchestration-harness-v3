@@ -41,3 +41,10 @@ Always schedule the next tick at **270s**. Never change this without asking the 
 - Agents cannot create or modify skill files (v1 constraint).
 - If any poller fails during a tick: release lock, stop — do not update `last_sync_at`.
 - During `/loop` ticks, only invoke skills explicitly listed in `harness/CLAUDE.md`. Never auto-invoke `setup` or any other skill not in the tick sequence.
+
+## Self-Improvement Notes (2026-06-04)
+
+### Gap: setup skill auto-invoked during loop tick
+**Signal:** session 36eb81d3: agent needed to re-read CLAUDE.md twice (indices 11, 37) while investigating why the `setup` skill was being triggered during `/loop` ticks. The root cause was that `setup` appears in the available-skills list with a description that matches loop context. A new rule was added during that session.
+**Category:** rule-violation
+**Suggestion:** The rule "Never auto-invoke `setup`" was absent before this session. The fix was applied in-session (index 39). Future improvement: add a note explaining *why* setup must not run during loop — "setup is idempotent but expensive; running it during a tick would re-check all phases and potentially overwrite running state."
