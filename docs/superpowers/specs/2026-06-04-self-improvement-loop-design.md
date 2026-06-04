@@ -34,9 +34,9 @@ New file: `harness/skills/self-improve.md`
 
 Both must pass for the skill to run:
 
-**Idle check** — no pending events, no running sessions:
+**Idle check** — no pending or in-flight events, no running sessions:
 ```bash
-sqlite3 harness/db/harness.db "SELECT id FROM events WHERE status='pending';"
+sqlite3 harness/db/harness.db "SELECT id FROM events WHERE status IN ('pending', 'processing');"
 sqlite3 harness/db/harness.db "SELECT id FROM sessions WHERE status='running';"
 ```
 If either returns rows → skip silently.
@@ -77,12 +77,16 @@ If 3 consecutive `status: failed` entries appear at the top of the state file wi
 
 ## Transcript Scan
 
+Transcript base path: `${CLAUDE_PROJECTS_DIR:-~/.claude/projects/}` — configurable via `.env`, defaults to `~/.claude/projects/` which is standard on all machines.
+
 ```bash
+TRANSCRIPTS_DIR="${CLAUDE_PROJECTS_DIR:-$HOME/.claude/projects}"
+
 # If state file exists and has a successful run:
-find ~/.claude/projects/ -name "*.jsonl" -newer harness/db/self-improvement-last-run.txt
+find "$TRANSCRIPTS_DIR" -name "*.jsonl" -newer harness/db/self-improvement-last-run.txt
 
 # First run (no state file):
-find ~/.claude/projects/ -name "*.jsonl" -mtime -1
+find "$TRANSCRIPTS_DIR" -name "*.jsonl" -mtime -1
 ```
 
 All matching transcript files are read and analyzed by Claude directly — no external LLM call.
@@ -120,12 +124,30 @@ For each file with identified gaps, append:
 
 Multiple gaps in the same file get multiple `###` sections under the same `##` block.
 
+When a gap spans multiple files (e.g., a rule defined in `dispatch.md` but referenced in `CLAUDE.md`), write the suggestion only to the **authoritative source** — the file that owns the rule. The improvement run must reason about ownership rather than duplicating suggestions across all referencing files.
+
 ---
 
 ## New Skill File Creation
 
-If analysis identifies a recurring pattern across 3+ sessions that doesn't fit any existing skill, the loop **may create** a new skill file in `harness/skills/`. The new file must:
-- Follow the same structure as existing skill files
+If analysis identifies a recurring pattern across 3+ sessions that doesn't fit any existing skill, the loop **may create** a new skill file in `harness/skills/`. The new file must use the standard skill template:
+
+```markdown
+---
+type: reference
+last_verified: YYYY-MM-DD
+owner: self-improvement
+---
+
+# skill-name
+
+One-line purpose statement.
+
+## Step 1: ...
+## Step 2: ...
+```
+
+The new file must also:
 - Be listed in the commit message so it's visible in the log
 - Not be auto-added to `dispatch.md`'s available skills list (human decision)
 
@@ -160,11 +182,34 @@ A failed run does not update the 24h gate timestamp, so it retries on the next i
 
 ## Commit
 
-After all suggestion blocks are written:
-```bash
-git add -A
-git commit -m "chore: self-improvement run YYYY-MM-DD — N gaps found in X files"
+The skill tracks the list of files it appends to during the run. After all suggestion blocks are written:
+
+**1. Append to `CHANGELOG.md`** (create if it doesn't exist) with an entry per run:
+
+```markdown
+## Self-Improvement Run — YYYY-MM-DD
+
+- dispatch.md: ambiguity (curl header order in Step 3)
+- dispatch.md: missing-recovery (Notion 404 handling)
+- sync-state.md: rule-violation (tick lock not released on poller failure)
 ```
+
+**2. Stage and commit only modified files explicitly:**
+
+```bash
+# MODIFIED_FILES is built up during the run as each file is appended to
+# Always include CHANGELOG.md
+git add CHANGELOG.md $MODIFIED_FILES
+git commit -m "$(cat <<EOF
+chore: self-improvement run YYYY-MM-DD — N gaps found in X files
+
+- file.md: category (short description)
+- file.md: category (short description)
+EOF
+)"
+```
+
+Never use `git add -A` — this prevents accidentally staging unrelated workspace changes or in-progress work.
 
 ---
 

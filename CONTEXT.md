@@ -33,3 +33,6 @@ _Avoid_: target repo, project folder, working directory
 
 **Context Key**: The Notion ticket Entity ID that groups related Events and Sessions. Always a Notion ticket — never a Slack thread or PR. The Dispatcher groups by context key to avoid duplicate sessions for the same work. The Slack poller is responsible for creating a stub Notion ticket (and setting the context key) when work originates from Slack. The stub has a minimal title (e.g., "From Slack: [timestamp]") and no body — the agent enriches it as its first action.
 _Avoid_: thread key, root ID, parent ID
+
+**Improvement Run**: One execution of the self-improvement skill — analyzes Claude Code transcripts from the last 24 hours, identifies skill gaps, and appends suggestions to harness skill/doc files. Tracked in a flat file (`harness/db/self-improvement-last-run.txt`), not in SQLite. Distinct from a Session: no user work item, no context key, no Notion ticket.
+_Avoid_: improvement session, maintenance run, optimization cycle
