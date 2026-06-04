@@ -1,5 +1,6 @@
 .worktrees/
 harness/db/harness.db
+harness/db/self-improvement-last-run.txt
 harness/workspace/
 .env
 *.lock
