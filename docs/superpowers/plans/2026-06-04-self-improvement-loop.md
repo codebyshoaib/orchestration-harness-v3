@@ -176,10 +176,23 @@ MODIFIED_FILES=""
 RUN_DATE=$(date -u +%Y-%m-%d)
 
 # For each unique FILE in GAPS:
-#   1. Append to that file:
-cat >> <FILE_PATH> << 'NOTES_EOF'
+#   0. Scope guard — skip files outside the allowed list:
+ALLOWED=0
+for PREFIX in "harness/skills/" "CLAUDE.md" "harness/CLAUDE.md" \
+              "CONTEXT.md" ".claude/skills/"; do
+  case "$FILE_PATH" in
+    "$PREFIX"*) ALLOWED=1 ;;
+  esac
+done
+if [ "$ALLOWED" -eq 0 ]; then
+  echo "[self-improve] WARN: $FILE_PATH not in allowed scope — skipping"
+  continue
+fi
 
-## Self-Improvement Notes (YYYY-MM-DD)
+#   1. Append to that file (unquoted heredoc so $RUN_DATE expands):
+cat >> "$FILE_PATH" <<NOTES_EOF
+
+## Self-Improvement Notes ($RUN_DATE)
 
 ### Gap: <short title>
 **Signal:** <exact observation from transcript>
@@ -234,8 +247,8 @@ fi
 ## Step 6: Commit
 
 ```bash
-CHANGE_COUNT=$(echo "$GAPS" | grep -c "^FILE:" || true)
 FILE_COUNT=$(echo "$MODIFIED_FILES" | wc -w | xargs)
+CHANGE_COUNT=$FILE_COUNT  # one entry per modified file
 
 # Build commit body — one line per gap
 COMMIT_BODY=""
@@ -489,6 +502,20 @@ Expected: `Consecutive failures: 3`
 rm harness/db/self-improvement-last-run.txt
 ```
 
+- [ ] **Step 7: Verify first-run gate passes (no state file)**
+
+```bash
+# Ensure no state file exists
+rm -f harness/db/self-improvement-last-run.txt
+
+STATE_FILE="harness/db/self-improvement-last-run.txt"
+if [ ! -f "$STATE_FILE" ]; then
+  echo "[self-improve] Gate passed. Starting improvement run."
+fi
+```
+
+Expected: outputs `[self-improve] Gate passed. Starting improvement run.`
+
 ---
 
 ## Task 5: End-to-end dry run
@@ -538,3 +565,39 @@ grep -l "Self-Improvement Notes" harness/skills/*.md CLAUDE.md CONTEXT.md 2>/dev
 ```
 
 Open one of the matched files and confirm the `## Self-Improvement Notes (YYYY-MM-DD)` block is well-formed at the bottom.
+
+---
+
+## Implementation Tasks
+
+Synthesized from this review's findings. Each task derives from a specific finding above.
+
+- [ ] **T1 (P1, human: ~30min / CC: ~5min)** — self-improve skill — Fix three issues found in review
+  - Surfaced by: Architecture D3 (GAPS bash var → use MODIFIED_FILES), Code Quality D4 (heredoc quoting → unquoted), Failure Modes D7 (scope guard → allowlist check)
+  - Files: `harness/skills/self-improve.md` (fixes already incorporated in plan Task 1 Step 1)
+  - Verify: grep for `NOTES_EOF` (unquoted), `ALLOWED=0` (scope guard), `FILE_COUNT=` (no $GAPS reference)
+
+- [ ] **T2 (P1, human: ~5min / CC: ~2min)** — harness/CLAUDE.md — Wire step 5
+  - Surfaced by: Architecture (integration point)
+  - Files: `harness/CLAUDE.md`
+  - Verify: `cat harness/CLAUDE.md` shows 5-step tick sequence referencing `self-improve.md`
+
+- [ ] **T3 (P2, human: ~15min / CC: ~3min)** — smoke tests — First-run gate test
+  - Surfaced by: Test Review D5 (first-run path only covered implicitly by Task 5)
+  - Files: plan doc (test is manual execution in Task 4 Step 7)
+  - Verify: gate outputs `[self-improve] Gate passed.` when no state file exists
+
+---
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAN | 4 issues, 0 critical gaps |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | — |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
+
+- **UNRESOLVED:** 0
+- **VERDICT:** ENG CLEARED — all findings resolved, 0 critical gaps. Ready to implement.
