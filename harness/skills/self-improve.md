@@ -54,11 +54,15 @@ if [ -f "$STATE_FILE" ]; then
   LAST_OK=$(grep "status: ok" "$STATE_FILE" | head -1 | cut -d'|' -f1 | xargs)
   if [ -n "$LAST_OK" ]; then
     LAST_TS=$(date -d "$LAST_OK" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$LAST_OK" +%s 2>/dev/null)
-    NOW_TS=$(date +%s)
-    ELAPSED=$(( NOW_TS - LAST_TS ))
-    if [ "$ELAPSED" -lt 86400 ]; then
-      echo "[self-improve] Last run was $(( ELAPSED / 3600 ))h ago. Skipping (need 24h)."
-      exit 0
+    if [ -z "$LAST_TS" ]; then
+      echo "[self-improve] Could not parse last run timestamp. Treating as expired."
+    else
+      NOW_TS=$(date +%s)
+      ELAPSED=$(( NOW_TS - LAST_TS ))
+      if [ "$ELAPSED" -lt 86400 ]; then
+        echo "[self-improve] Last run was $(( ELAPSED / 3600 ))h ago. Skipping (need 24h)."
+        exit 0
+      fi
     fi
   fi
 fi
@@ -167,7 +171,7 @@ cat >> "$FILE_PATH" <<NOTES_EOF
 NOTES_EOF
 
 #   2. Add to MODIFIED_FILES:
-MODIFIED_FILES="$MODIFIED_FILES <FILE_PATH>"
+MODIFIED_FILES="$MODIFIED_FILES $FILE_PATH"
 ```
 
 If the gap analysis identified a pattern recurring across 3+ sessions with no existing skill to contain it, create a new skill file using this template:
@@ -196,9 +200,9 @@ Save to `harness/skills/<skill-name>.md`. Add it to `MODIFIED_FILES`. Do NOT add
 Append (or create) `CHANGELOG.md` at the repo root with a new entry at the top:
 
 ```bash
-CHANGELOG_ENTRY="## Self-Improvement Run — $RUN_DATE\n\n"
+CHANGELOG_ENTRY="## Self-Improvement Run — ${RUN_DATE}"$'\n\n'
 # For each gap: append "- <file>: <category> (<short description>)\n"
-CHANGELOG_ENTRY="$CHANGELOG_ENTRY\n---\n"
+CHANGELOG_ENTRY="${CHANGELOG_ENTRY}"$'\n---\n'
 
 if [ -f "CHANGELOG.md" ]; then
   EXISTING_CHANGELOG=$(cat CHANGELOG.md)
@@ -285,4 +289,4 @@ fi
 exit 0
 ```
 
-**Important:** Always `exit 0` from failure handling. Step 5 must never propagate errors to the tick.
+**Important:** Always `exit 0` from failure handling. This step must never propagate errors to the tick.
