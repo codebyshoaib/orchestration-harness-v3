@@ -62,7 +62,18 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
    - `notion` entity: `external_id = <new page id>`, `type = "ticket"`
    - Link: `slack_entity → notion_entity`, `relationship = "originated_from"`
 
-4. Insert event:
+4. Post acknowledgment to Slack:
+   ```bash
+   curl -s -X POST "https://slack.com/api/chat.postMessage" \
+     -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d "{
+       \"channel\": \"$CHANNEL_ID\",
+       \"text\": \"Got your message! I'm looking into this. Check back soon for updates.\"
+     }"
+   ```
+
+5. Insert event:
    - Event ID: `slack-$CHANNEL_ID-$MESSAGE_TS`
    - Event type: `message.tagged`
    - context_key: Notion entity ID
