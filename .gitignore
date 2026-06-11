@@ -7,3 +7,4 @@ harness/workspace/
 *.pid
 harness/e2e-screenshots/
 harness/daemon/venv/
+graphify-out
