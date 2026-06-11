@@ -14,19 +14,54 @@ Poll the configured Slack channel for messages since `last_sync_at` that mention
 Use `search.messages` to find all messages (top-level and replies) that mention the bot, across all threads:
 
 ```bash
-LAST_SYNC_TS=$(sqlite3 harness/db/harness.db \
-  "SELECT strftime('%s', last_sync_at) FROM sync_state WHERE id='global';")
-curl -s "https://slack.com/api/search.messages?query=<@U0B5YJEQQ6P>&count=20&sort=timestamp&sort_dir=asc" \
+# Overlap buffer (seconds). Slack's search index is NOT real-time — a message
+# posted just before a tick may not be searchable until a later tick. We poll a
+# window that reaches back PAST last_sync_at so late-indexed messages are still
+# caught instead of being silently skipped once the watermark advances. Re-seeing
+# an already-processed message is harmless: the per-message idempotency guard
+# below skips it, and the event insert is INSERT OR IGNORE as a backstop.
+OVERLAP_BUFFER_SECS=120
+WINDOW_START_TS=$(sqlite3 harness/db/harness.db \
+  "SELECT strftime('%s', last_sync_at) - $OVERLAP_BUFFER_SECS FROM sync_state WHERE id='global';")
+
+# Derive the bot's own user ID at poll time — never hardcode it. A hardcoded ID
+# silently matches zero messages once the bot or token is rotated.
+BOT_USER_ID=$(curl -s -X POST https://slack.com/api/auth.test \
+  -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['user_id'])")
+
+# search.messages requires the user token (search:read). -G + --data-urlencode encodes
+# the <@BOT> mention so the angle brackets and @ are transmitted correctly.
+# sort_dir=desc returns the NEWEST matches first, so recent mentions are always on
+# the first page — with asc, once the bot has >count lifetime mentions the page is
+# all-old and new mentions never appear, dropping them regardless of the window.
+curl -s -G "https://slack.com/api/search.messages" \
+  --data-urlencode "query=<@$BOT_USER_ID>" \
+  --data "count=20&sort=timestamp&sort_dir=desc" \
   -H "Authorization: Bearer $SLACK_USER_TOKEN"
 ```
 
-Filter results to `message.ts > last_sync_at`. For each matching message, extract:
+Filter results to `message.ts > $WINDOW_START_TS` (float comparison — Slack `ts` is epoch seconds with a microsecond fraction). For each matching message, extract:
 - `channel.id` → `CHANNEL_ID`
 - `ts` → `MESSAGE_TS`
 - `thread_ts` (if present) → the root thread timestamp; use this as the thread identifier
 - If no `thread_ts`, the message itself is the thread root: `THREAD_TS=$MESSAGE_TS`
 
 ## For each message mentioning `@agent`
+
+0. **Idempotency guard — skip already-seen messages.** Because the poll window
+   overlaps `last_sync_at`, a message can re-appear on a later tick. If an event
+   for this message already exists, skip the message ENTIRELY — do not re-create
+   the stub ticket and do not re-post the acknowledgment (those side effects are
+   not protected by `INSERT OR IGNORE`):
+
+   ```bash
+   EVENT_ID="slack-$CHANNEL_ID-$MESSAGE_TS"
+   SEEN=$(sqlite3 harness/db/harness.db "SELECT 1 FROM events WHERE id='$EVENT_ID';")
+   if [ -n "$SEEN" ]; then
+     continue   # already pending/processing/done — nothing to do
+   fi
+   ```
 
 1. Check if a Notion entity is linked to this Slack thread:
 
@@ -73,7 +108,8 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
      }"
    ```
 
-5. Insert event:
+5. Insert event (use `INSERT OR IGNORE` — the event ID is deterministic, so a
+   re-polled message collapses to a no-op rather than a duplicate row):
    - Event ID: `slack-$CHANNEL_ID-$MESSAGE_TS`
    - Event type: `message.tagged`
    - context_key: Notion entity ID

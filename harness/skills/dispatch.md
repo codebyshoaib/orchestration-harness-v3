@@ -126,12 +126,12 @@ Answer directly in Slack, update the Notion ticket, close the session.
    - E2E test cases:
      - [test case 1 name]: [expected outcome]
      - [test case 2 name]: [expected outcome]
-   Any questions or changes before I start? Reply @Cortex go to proceed."
+   Any questions or changes before I start? Reply in this thread, @-mentioning me with "go", to proceed."
    ```
 5. Set Notion ticket `Status` → `Blocked` (waiting for approval).
-6. Update session: `status='cancelled'` — the user's "@Cortex go" reply will spawn a new session to execute.
+6. Update session: `status='cancelled'` — the user's reply @-mentioning the agent (e.g. "go") will spawn a new session to execute.
 
-**Step B — Execute (only after user approves via "@Cortex go" reply):**
+**Step B — Execute (only after the user approves by @-mentioning the agent with "go"):**
 1. Create a new branch: `git -C harness/workspace checkout -b <short-kebab-description>`
 2. Implement the plan.
 3. Commit and push the implementation branch (do NOT open the PR yet):
