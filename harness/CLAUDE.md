@@ -10,7 +10,7 @@ This file is the L1 routing table. Each `/loop` tick runs the sequence below.
 
 2. **Poll all sources** (if any poller fails, release lock and stop — do not update `last_sync_at`):
    - Notion: `harness/skills/poll-notion.md`
-   - Slack: `harness/skills/poll-slack.md`
+   - Slack: **handled by daemon** — `harness/daemon/slack_daemon.py` writes events in real time via Socket Mode. Do NOT run `poll-slack.md` during the tick.
    - GitHub: `harness/skills/poll-github.md`
 
 3. **Dispatch**: `harness/skills/dispatch.md`

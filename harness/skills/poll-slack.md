@@ -1,5 +1,7 @@
 # poll-slack
 
+> **Superseded by `harness/daemon/slack_daemon.py`** — Slack events are now ingested in real time via Socket Mode. Do NOT run this skill during a tick. It is retained as reference documentation only.
+
 Poll the configured Slack channel for messages since `last_sync_at` that mention `@agent`. If a message thread has no linked Notion ticket, create a stub ticket inline.
 
 ## Required env vars

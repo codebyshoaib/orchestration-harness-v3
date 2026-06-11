@@ -6,3 +6,4 @@ harness/workspace/
 *.lock
 *.pid
 harness/e2e-screenshots/
+harness/daemon/venv/

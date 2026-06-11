@@ -1,0 +1,15 @@
+[Unit]
+Description=Taleemabad Harness — Slack Socket Mode Daemon
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Taleemabad/orchestration-harness-v2
+ExecStart=%h/Taleemabad/orchestration-harness-v2/harness/daemon/venv/bin/python harness/daemon/slack_daemon.py
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
